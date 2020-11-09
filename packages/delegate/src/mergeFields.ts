@@ -179,7 +179,12 @@ export function mergeFields(
   let containsPromises = false;
   const resultMap: Map<Promise<any> | any, SelectionSetNode> = new Map();
   delegationMap.forEach((selectionSet: SelectionSetNode, s: Subschema) => {
-    const maybePromise = s.merge[typeName].resolve(object, context, info, s, selectionSet);
+    const mergedTypeConfig = s.merge[typeName];
+    let key: any;
+    if (mergedTypeConfig.key) {
+      key = mergedTypeConfig.key(object);
+    }
+    const maybePromise = mergedTypeConfig.resolve(object, context, info, s, selectionSet, key);
     resultMap.set(maybePromise, selectionSet);
     if (isPromise(maybePromise)) {
       containsPromises = true;

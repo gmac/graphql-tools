@@ -1,5 +1,5 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { stitchSchemas, makeDefaultMergedTypeResolver } from '@graphql-tools/stitch';
+import { stitchSchemas, createDefaultMergedTypeResolver } from '@graphql-tools/stitch';
 import { MergedTypeConfig } from '@graphql-tools/delegate';
 import { graphql } from 'graphql';
 
@@ -48,7 +48,7 @@ describe('Custom resolvers', () => {
     }
   });
 
-  describe('eagerReturn', () => {
+  describe('beforeResolve', () => {
     const gatewaySchema = stitchSchemas({
       subschemas: [
         {
@@ -62,20 +62,20 @@ describe('Custom resolvers', () => {
               fieldName: '_widgets',
               key: ({ id }) => id,
               argsFromKeys: (ids) => ({ ids }),
-              eagerReturn: (_obj, _ctx, _inf, _sch, _sel, key) => Number(key) > 5 ? null : undefined,
+              beforeResolve: (_obj, _ctx, _inf, _sch, _sel, key) => Number(key) > 5 ? null : undefined,
             },
             Sprocket: {
               selectionSet: '{ id }',
               fieldName: '_sprocket',
               args: ({ id }) => ({ id }),
-              eagerReturn: ({ id }) => Number(id) > 5 ? null : undefined,
+              beforeResolve: ({ id }) => Number(id) > 5 ? null : undefined,
             },
           },
         },
       ]
     });
 
-    it('passes undefined from eagerReturn through to delegation', async () => {
+    it('passes undefined from beforeResolve through to delegation', async () => {
       const { data } = await graphql(gatewaySchema, `
         query {
           widget(id: 1) { id source }
@@ -89,7 +89,7 @@ describe('Custom resolvers', () => {
       });
     });
 
-    it('returns value from eagerReturn directly', async () => {
+    it('returns value from beforeResolve directly', async () => {
       const { data } = await graphql(gatewaySchema, `
         query {
           widget(id: 10) { id source }
@@ -148,7 +148,7 @@ describe('Custom resolvers', () => {
 
   describe('wrapped default resolver', () => {
     function wrappedResolve(mergedTypeConfig: MergedTypeConfig): MergedTypeConfig {
-      const defaultResolve = makeDefaultMergedTypeResolver(mergedTypeConfig);
+      const defaultResolve = createDefaultMergedTypeResolver(mergedTypeConfig);
       mergedTypeConfig.resolve = async (obj, ctx, inf, sch, sel, key) => {
         const result = await defaultResolve(obj, ctx, inf, sch, sel, key);
         result.source += '->resolve';

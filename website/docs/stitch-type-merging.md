@@ -535,13 +535,13 @@ The `beforeResolve` option is a `MergedTypeResolver` that will passthrough to th
 Frequently we'll want to augment merged type resolution without fundamentally changing its behavior. This can be done by _wrapping_ a default merged type resolver in a custom implementation. For example, adding [statsd](https://github.com/msiebuhr/node-statsd-client) instrumentation might look like this:
 
 ```ts
-import { makeDefaultMergedTypeResolver, stitchSchemas } from '@graphql-tools/stitch';
+import { createDefaultMergedTypeResolver, stitchSchemas } from '@graphql-tools/stitch';
 import { SDC } from 'statsd-client';
 
 const statsd = new SDC({ ... });
 
 function instrumentMergedType(mergedTypeConfig) {
-  const defaultResolve = makeDefaultMergedTypeResolver(mergedTypeConfig);
+  const defaultResolve = createDefaultMergedTypeResolver(mergedTypeConfig);
   mergedTypeConfig.resolve = async (obj, ctx, info, cfg, sel, key) => {
     const startTime = process.hrtime();
     try {
@@ -568,7 +568,7 @@ const schema = stitchSchemas({
 });
 ```
 
-The `makeDefaultMergedTypeResolver` helper accepts a `MergedTypeConfig` object and returns the default `MergedTypeResolver` implementation for that config. This resolver function is then wrapped with additional behavior, and assigned as a custom `resolve` method for the config.
+The `createDefaultMergedTypeResolver` helper accepts a `MergedTypeConfig` object and returns the default `MergedTypeResolver` implementation for that config. This resolver function is then wrapped with additional behavior, and assigned as a custom `resolve` method for the config.
 
 ### Custom resolvers
 
