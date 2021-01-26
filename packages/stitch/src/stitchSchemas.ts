@@ -26,7 +26,7 @@ import { IStitchSchemasOptions, SubschemaConfigTransform } from './types';
 import { buildTypeCandidates, buildTypes } from './typeCandidates';
 import { createStitchingInfo, completeStitchingInfo, addStitchingInfo } from './stitchingInfo';
 import { isolateComputedFields } from './isolateComputedFields';
-import { defaultSubschemaConfigTransforms } from './subschemaConfigTransforms';
+import { defaultSubschemaConfigTransforms, multipleKeysTransformer } from './subschemaConfigTransforms';
 
 export function stitchSchemas({
   subschemas = [],
@@ -202,13 +202,17 @@ function applySubschemaConfigTransforms(
     ? subschemaOrSubschemaConfig
     : { schema: subschemaOrSubschemaConfig };
 
-  const newSubschemaConfig = subschemaConfigTransforms.reduce((acc, subschemaConfigTransform) => {
-    return subschemaConfigTransform(acc);
-  }, subschemaConfig);
+  let transformedSubschemaConfigs: Array<SubschemaConfig> = [subschemaConfig];
+  subschemaConfigTransforms
+    .concat([multipleKeysTransformer, isolateComputedFields])
+    .forEach(subschemaConfigTransform => {
+      const mapped: Array<SubschemaConfig | Array<SubschemaConfig>> = transformedSubschemaConfigs.map(ssConfig =>
+        subschemaConfigTransform(ssConfig)
+      );
+      transformedSubschemaConfigs = mapped.flat();
+    });
 
-  const transformedSubschemas = isolateComputedFields(newSubschemaConfig).map(
-    subschemaConfig => new Subschema(subschemaConfig)
-  );
+  const transformedSubschemas = transformedSubschemaConfigs.map(ssConfig => new Subschema(ssConfig));
 
   const baseSubschema = transformedSubschemas[0];
 
