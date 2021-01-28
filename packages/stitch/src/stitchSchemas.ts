@@ -26,7 +26,11 @@ import { IStitchSchemasOptions, SubschemaConfigTransform } from './types';
 import { buildTypeCandidates, buildTypes } from './typeCandidates';
 import { createStitchingInfo, completeStitchingInfo, addStitchingInfo } from './stitchingInfo';
 import { isolateComputedFields } from './isolateComputedFields';
-import { defaultSubschemaConfigTransforms, multipleKeysTransformer } from './subschemaConfigTransforms';
+import {
+  defaultSubschemaConfigTransforms,
+  mergedTypeAccessorsTransformer,
+  mergedTypeMultiAccessTransformer,
+} from './subschemaConfigTransforms';
 
 export function stitchSchemas({
   subschemas = [],
@@ -192,6 +196,12 @@ export function stitchSchemas({
   return schema;
 }
 
+const subschemaConfigTransformerPresets = [
+  mergedTypeAccessorsTransformer,
+  isolateComputedFields,
+  mergedTypeMultiAccessTransformer,
+];
+
 function applySubschemaConfigTransforms(
   subschemaConfigTransforms: Array<SubschemaConfigTransform>,
   subschemaOrSubschemaConfig: GraphQLSchema | SubschemaConfig,
@@ -203,14 +213,12 @@ function applySubschemaConfigTransforms(
     : { schema: subschemaOrSubschemaConfig };
 
   let transformedSubschemaConfigs: Array<SubschemaConfig> = [subschemaConfig];
-  subschemaConfigTransforms
-    .concat([multipleKeysTransformer, isolateComputedFields])
-    .forEach(subschemaConfigTransform => {
-      const mapped: Array<SubschemaConfig | Array<SubschemaConfig>> = transformedSubschemaConfigs.map(ssConfig =>
-        subschemaConfigTransform(ssConfig)
-      );
-      transformedSubschemaConfigs = mapped.flat();
-    });
+  subschemaConfigTransforms.concat(subschemaConfigTransformerPresets).forEach(subschemaConfigTransform => {
+    const mapped: Array<SubschemaConfig | Array<SubschemaConfig>> = transformedSubschemaConfigs.map(ssConfig =>
+      subschemaConfigTransform(ssConfig)
+    );
+    transformedSubschemaConfigs = mapped.flat();
+  });
 
   const transformedSubschemas = transformedSubschemaConfigs.map(ssConfig => new Subschema(ssConfig));
 

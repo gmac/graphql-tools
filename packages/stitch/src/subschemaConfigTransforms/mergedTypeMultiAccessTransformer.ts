@@ -1,12 +1,14 @@
 import { cloneSubschemaConfig, SubschemaConfig } from '@graphql-tools/delegate';
 
-export function multipleKeysTransformer(subschemaConfig: SubschemaConfig): SubschemaConfig | Array<SubschemaConfig> {
+export function mergedTypeMultiAccessTransformer(
+  subschemaConfig: SubschemaConfig
+): SubschemaConfig | Array<SubschemaConfig> {
   if (!subschemaConfig.merge) return subschemaConfig;
 
   const multipleKeys: Record<string, Array<MergedTypeConfig>> = Object.create(null);
   const baseSubschemaConfig: SubschemaConfig = subschemaConfig;
 
-  Object.entries(subschemaConfig).forEach(([typeName, mergedTypeConfigOrConfigs]) => {
+  Object.keys(subschemaConfig.merge).forEach(typeName => {
     if (Array.isArray(mergedTypeConfigOrConfigs)) {
       subschemaConfig = cloneSubschemaConfig(subschemaConfig);
       subschemaConfig.merge[typeName] = mergedTypeConfigOrConfigs[0];
