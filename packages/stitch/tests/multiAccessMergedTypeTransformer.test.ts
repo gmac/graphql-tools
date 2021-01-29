@@ -1,11 +1,11 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { multiAccessMergedTypeTransformer } from '@graphql-tools/stitch';
+import { splitMergedTypeAccessTransformer } from '@graphql-tools/stitch';
 
 const schema = makeExecutableSchema({ typeDefs: 'type Query { go:Int }' });
 
-describe('multiAccessMergedTypeTransformer', () => {
+describe('splitMergedTypeAccessTransformer', () => {
   it('applies merged type config accessors', () => {
-    const results = multiAccessMergedTypeTransformer({
+    const results = splitMergedTypeAccessTransformer({
       schema,
       merge: {
         Product: {
@@ -28,7 +28,7 @@ describe('multiAccessMergedTypeTransformer', () => {
   });
 
   it('builds multiple subschemas for separate accessors', () => {
-    const results = multiAccessMergedTypeTransformer({
+    const results = splitMergedTypeAccessTransformer({
       schema,
       merge: {
         Product: {
@@ -57,7 +57,7 @@ describe('multiAccessMergedTypeTransformer', () => {
   });
 
   it('consolidates type permutations into shared subschemas', () => {
-    const results = multiAccessMergedTypeTransformer({
+    const results = splitMergedTypeAccessTransformer({
       schema,
       merge: {
         Product: {

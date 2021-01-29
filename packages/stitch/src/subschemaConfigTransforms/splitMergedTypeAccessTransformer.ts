@@ -1,6 +1,6 @@
 import { cloneSubschemaConfig, SubschemaConfig } from '@graphql-tools/delegate';
 
-export function multiAccessMergedTypeTransformer(subschemaConfig: SubschemaConfig): Array<SubschemaConfig> {
+export function splitMergedTypeAccessTransformer(subschemaConfig: SubschemaConfig): Array<SubschemaConfig> {
   if (!subschemaConfig.merge) return [subschemaConfig];
 
   const maxAccessors = Object.values(subschemaConfig.merge).reduce((max: number, mergedTypeConfig) => {
