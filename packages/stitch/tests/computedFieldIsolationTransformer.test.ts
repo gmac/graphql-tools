@@ -1,9 +1,9 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { isolateComputedFields } from '@graphql-tools/stitch';
+import { computedFieldIsolationTransformer } from '@graphql-tools/stitch';
 import { Subschema } from '@graphql-tools/delegate';
 import { GraphQLObjectType, GraphQLInterfaceType } from 'graphql';
 
-describe('isolateComputedFields', () => {
+describe('computedFieldIsolationTransformer', () => {
   describe('basic isolation', ()    => {
     const storefrontSchema = makeExecutableSchema({
       typeDefs: `
@@ -33,7 +33,7 @@ describe('isolateComputedFields', () => {
     });
 
     it('splits a subschema into base and computed portions', async () => {
-      const [baseConfig, computedConfig] = isolateComputedFields({
+      const [baseConfig, computedConfig] = computedFieldIsolationTransformer({
         schema: storefrontSchema,
         merge: {
           Product: {
@@ -85,7 +85,7 @@ describe('isolateComputedFields', () => {
     });
 
     it('does not split schemas with only non-computed fields', async () => {
-      const subschemas = isolateComputedFields({
+      const subschemas = computedFieldIsolationTransformer({
         schema: storefrontSchema,
         merge: {
           Product: {
@@ -115,7 +115,7 @@ describe('isolateComputedFields', () => {
     });
 
     it('does not reprocess already isolated computations', async () => {
-      const subschemas = isolateComputedFields({
+      const subschemas = computedFieldIsolationTransformer({
         schema: storefrontSchema,
         merge: {
           Product: {
@@ -160,7 +160,7 @@ describe('isolateComputedFields', () => {
     });
 
     it('moves all computed types to the computed schema', async () => {
-      const [baseConfig, computedConfig] = isolateComputedFields({
+      const [baseConfig, computedConfig] = computedFieldIsolationTransformer({
         schema: storefrontSchema,
         merge: {
           Storefront: {
@@ -227,7 +227,7 @@ describe('isolateComputedFields', () => {
         `
       });
 
-      const [baseConfig, computedConfig] = isolateComputedFields({
+      const [baseConfig, computedConfig] = computedFieldIsolationTransformer({
         schema: testSchema,
         merge: {
           Product: {

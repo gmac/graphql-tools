@@ -25,11 +25,10 @@ import { IStitchSchemasOptions, SubschemaConfigTransform } from './types';
 
 import { buildTypeCandidates, buildTypes } from './typeCandidates';
 import { createStitchingInfo, completeStitchingInfo, addStitchingInfo } from './stitchingInfo';
-import { isolateComputedFields } from './isolateComputedFields';
 import {
   defaultSubschemaConfigTransforms,
-  mergedTypeAccessorsTransformer,
-  mergedTypeMultiAccessTransformer,
+  computedFieldIsolationTransformer,
+  multiAccessMergedTypeTransformer,
 } from './subschemaConfigTransforms';
 
 export function stitchSchemas({
@@ -196,11 +195,7 @@ export function stitchSchemas({
   return schema;
 }
 
-const subschemaConfigTransformerPresets = [
-  mergedTypeAccessorsTransformer,
-  isolateComputedFields,
-  mergedTypeMultiAccessTransformer,
-];
+const subschemaConfigTransformerPresets = [computedFieldIsolationTransformer, multiAccessMergedTypeTransformer];
 
 function applySubschemaConfigTransforms(
   subschemaConfigTransforms: Array<SubschemaConfigTransform>,

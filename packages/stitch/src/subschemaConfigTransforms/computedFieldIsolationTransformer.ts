@@ -6,7 +6,7 @@ import { getImplementingTypes, pruneSchema, filterSchema } from '@graphql-tools/
 
 import { TransformCompositeFields } from '@graphql-tools/wrap';
 
-export function isolateComputedFields(subschemaConfig: SubschemaConfig): Array<SubschemaConfig> {
+export function computedFieldIsolationTransformer(subschemaConfig: SubschemaConfig): Array<SubschemaConfig> {
   if (subschemaConfig.merge == null) {
     return [subschemaConfig];
   }
@@ -16,6 +16,13 @@ export function isolateComputedFields(subschemaConfig: SubschemaConfig): Array<S
 
   Object.entries(subschemaConfig.merge).forEach(([typeName, mergedTypeConfig]) => {
     baseSchemaTypes[typeName] = mergedTypeConfig;
+
+    if (
+      mergedTypeConfig.accessors &&
+      !mergedTypeConfig.accessors.every(a => a.fieldName === mergedTypeConfig.accessors[0].fieldName)
+    ) {
+      throw new Error(`To implement computed fields, merged type "${typeName}" may only have one root access field.`);
+    }
 
     if (mergedTypeConfig.fields) {
       const baseFields: Record<string, MergedFieldConfig> = Object.create(null);

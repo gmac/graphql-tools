@@ -80,21 +80,17 @@ describe('merge on multiple keys', () => {
         schema: vendorSchema,
         merge: {
           Product: {
-            selectionSet: '{ upc }',
-            fieldName: 'productsByKey',
-            key: ({ upc }) => ({ upc }),
-            argsFromKeys: (keys) => ({ keys }),
-          }
-        }
-      },
-      {
-        schema: vendorSchema,
-        merge: {
-          Product: {
-            selectionSet: '{ id }',
-            fieldName: 'productsByKey',
-            key: ({ id }) => ({ id }),
-            argsFromKeys: (keys) => ({ keys }),
+            accessors: [{
+              selectionSet: '{ upc }',
+              fieldName: 'productsByKey',
+              key: ({ upc }) => ({ upc }),
+              argsFromKeys: (keys) => ({ keys }),
+            }, {
+              selectionSet: '{ id }',
+              fieldName: 'productsByKey',
+              key: ({ id }) => ({ id }),
+              argsFromKeys: (keys) => ({ keys }),
+            }],
           }
         }
       },

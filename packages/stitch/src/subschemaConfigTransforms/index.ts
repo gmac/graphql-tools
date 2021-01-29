@@ -1,9 +1,7 @@
 import { computedDirectiveTransformer } from './computedDirectiveTransformer';
-import { mergedTypeAccessorsTransformer } from './mergedTypeAccessorsTransformer';
-import { mergedTypeMultiAccessTransformer } from './mergedTypeMultiAccessTransformer';
 
 export { computedDirectiveTransformer } from './computedDirectiveTransformer';
-export { mergedTypeAccessorsTransformer } from './mergedTypeAccessorsTransformer';
-export { mergedTypeMultiAccessTransformer } from './mergedTypeMultiAccessTransformer';
+export { computedFieldIsolationTransformer } from './computedFieldIsolationTransformer';
+export { multiAccessMergedTypeTransformer } from './multiAccessMergedTypeTransformer';
 
 export const defaultSubschemaConfigTransforms = [computedDirectiveTransformer('computed')];
