@@ -49,14 +49,14 @@ export function stitchingDirectivesTransformer(
   return (subschemaConfig: SubschemaConfig): SubschemaConfig => {
     const newSubschemaConfig = cloneSubschemaConfig(subschemaConfig);
 
-    const selectionSetsByType: Record<string, SelectionSetNode> = Object.create(null);
+    const selectionSetsByType: Record<string, Array<SelectionSetNode>> = Object.create(null);
     const computedFieldSelectionSets: Record<string, Record<string, SelectionSetNode>> = Object.create(null);
     const mergedTypesResolversInfo: Record<string, MergedTypeResolverInfo> = Object.create(null);
     const canonicalTypesInfo: Record<string, { canonical?: boolean; fields?: Record<string, boolean> }> = Object.create(
       null
     );
 
-    const schema = subschemaConfig.schema;
+    const schema = newSubschemaConfig.schema;
 
     // gateway should also run validation
     stitchingDirectivesValidator(options)(schema);
@@ -74,11 +74,16 @@ export function stitchingDirectivesTransformer(
     mapSchema(schema, {
       [MapperKind.OBJECT_TYPE]: type => {
         const directives = getDirectives(schema, type, pathToDirectivesInExtensions);
+        let keyDirectiveArgs = directives[keyDirectiveName];
 
-        const keyDirective = directives[keyDirectiveName];
-        if (keyDirective) {
-          const selectionSet = parseSelectionSet(keyDirective.selectionSet, { noLocation: true });
-          selectionSetsByType[type.name] = selectionSet;
+        if (keyDirectiveArgs) {
+          if (!Array.isArray(keyDirectiveArgs)) {
+            keyDirectiveArgs = [keyDirectiveArgs];
+          }
+          keyDirectiveArgs.forEach(args => {
+            selectionSetsByType[type.name] = selectionSetsByType[type.name] ?? [];
+            selectionSetsByType[type.name].push(parseSelectionSet(args.selectionSet, { noLocation: true }));
+          });
         }
 
         if (directives[canonicalDirectiveName]) {
@@ -101,18 +106,20 @@ export function stitchingDirectivesTransformer(
 
         const mergeDirectiveKeyField = directives[mergeDirectiveName]?.keyField;
         if (mergeDirectiveKeyField) {
-          const selectionSet = parseSelectionSet(`{ ${mergeDirectiveKeyField}}`, { noLocation: true });
-
+          const selectionSet = parseSelectionSet(`{ ${mergeDirectiveKeyField} }`, { noLocation: true });
           const typeNames: Array<string> = directives[mergeDirectiveName]?.types;
-
           const returnType = getNamedType(fieldConfig.type);
 
           forEachConcreteType(schema, returnType, directives[mergeDirectiveName]?.types, typeName => {
             if (typeNames == null || typeNames.includes(typeName)) {
-              const existingSelectionSet = selectionSetsByType[typeName];
-              selectionSetsByType[typeName] = existingSelectionSet
-                ? mergeSelectionSets(existingSelectionSet, selectionSet)
-                : selectionSet;
+              const existingSelectionSets = selectionSetsByType[typeName];
+              if (existingSelectionSets) {
+                selectionSetsByType[typeName] = existingSelectionSets.map(existingSelectionSet => {
+                  return mergeSelectionSets(existingSelectionSet, selectionSet);
+                });
+              } else {
+                selectionSetsByType[typeName] = [selectionSet];
+              }
             }
           });
         }
@@ -188,18 +195,46 @@ export function stitchingDirectivesTransformer(
       },
     });
 
-    if (subschemaConfig.merge) {
-      Object.entries(subschemaConfig.merge).forEach(([typeName, mergedTypeConfig]) => {
-        if (mergedTypeConfig.selectionSet) {
-          const selectionSet = parseSelectionSet(mergedTypeConfig.selectionSet, { noLocation: true });
-          if (selectionSet) {
-            if (selectionSetsByType[typeName]) {
-              selectionSetsByType[typeName] = mergeSelectionSets(selectionSetsByType[typeName], selectionSet);
-            } else {
-              selectionSetsByType[typeName] = selectionSet;
+    if (newSubschemaConfig.merge) {
+      const accessorFieldNames = [
+        'selectionSet',
+        'fieldName',
+        'args',
+        'key',
+        'argsFromKeys',
+        'valuesFromResults',
+        'resolve',
+      ] as const;
+
+      Object.entries(newSubschemaConfig.merge).forEach(([typeName, mergedTypeConfig]) => {
+        if (mergedTypeConfig.accessors == null) {
+          const accessor = accessorFieldNames.reduce((acc, accessorFieldName) => {
+            if (mergedTypeConfig[accessorFieldName]) {
+              acc[accessorFieldName] = mergedTypeConfig[accessorFieldName];
+              delete mergedTypeConfig[accessorFieldName];
             }
+            return acc;
+          }, {});
+
+          if (Object.keys(accessor).length) {
+            mergedTypeConfig.accessors = [accessor];
           }
         }
+
+        if (mergedTypeConfig.accessors) {
+          const existingSelectionSets = selectionSetsByType[typeName];
+          mergedTypeConfig.accessors.forEach((accessor, index) => {
+            const selectionSet = parseSelectionSet(accessor.selectionSet, { noLocation: true });
+            if (selectionSet) {
+              if (existingSelectionSets[index]) {
+                existingSelectionSets[index] = mergeSelectionSets(existingSelectionSets[index], selectionSet);
+              } else {
+                existingSelectionSets[index] = selectionSet;
+              }
+            }
+          });
+        }
+
         if (mergedTypeConfig.fields) {
           Object.entries(mergedTypeConfig.fields).forEach(([fieldName, fieldConfig]) => {
             if (!fieldConfig.selectionSet) return;
@@ -225,22 +260,14 @@ export function stitchingDirectivesTransformer(
 
     const allSelectionSetsByType: Record<string, Array<SelectionSetNode>> = Object.create(null);
 
-    Object.entries(selectionSetsByType).forEach(([typeName, selectionSet]) => {
-      if (allSelectionSetsByType[typeName] == null) {
-        allSelectionSetsByType[typeName] = [selectionSet];
-      } else {
-        allSelectionSetsByType[typeName].push(selectionSet);
-      }
+    Object.keys(selectionSetsByType).forEach(typeName => {
+      allSelectionSetsByType[typeName] = selectionSetsByType[typeName].slice();
     });
 
-    Object.entries(computedFieldSelectionSets).forEach(([typeName, selectionSets]) => {
-      Object.values(selectionSets).forEach(selectionSet => {
-        if (allSelectionSetsByType[typeName] == null) {
-          allSelectionSetsByType[typeName] = [selectionSet];
-        } else {
-          allSelectionSetsByType[typeName].push(selectionSet);
-        }
-      });
+    Object.entries(computedFieldSelectionSets).forEach(([typeName, fieldSelectionMap]) => {
+      allSelectionSetsByType[typeName] = (allSelectionSetsByType[typeName] ?? []).concat(
+        Object.values(fieldSelectionMap)
+      );
     });
 
     mapSchema(schema, {

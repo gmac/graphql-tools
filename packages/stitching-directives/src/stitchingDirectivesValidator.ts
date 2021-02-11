@@ -33,10 +33,13 @@ export function stitchingDirectivesValidator(
     mapSchema(schema, {
       [MapperKind.OBJECT_TYPE]: type => {
         const directives = getDirectives(schema, type, pathToDirectivesInExtensions);
+        let keyDirectiveArgs = directives[keyDirectiveName];
 
-        if (directives[keyDirectiveName]) {
-          const directiveArgumentMap = directives[keyDirectiveName];
-          parseSelectionSet(directiveArgumentMap.selectionSet);
+        if (keyDirectiveArgs) {
+          if (!Array.isArray(keyDirectiveArgs)) {
+            keyDirectiveArgs = [keyDirectiveArgs];
+          }
+          keyDirectiveArgs.forEach(args => parseSelectionSet(args.selectionSet));
         }
 
         return undefined;
